@@ -27,59 +27,56 @@ public class Main {
 
     }
 
-    public static class Component {
+    public static class Software
+    {
 
         public String name;
         public List<HierarchyStore> hierarchyStoreList;
 
-        Component(String name) {
+        Software(String name) {
             this.name = name;
             this.hierarchyStoreList = new ArrayList<>();
         }
     }
 
-    public static Map<String, List<Component>> graph = new HashMap<>();
+    public static Map<String, List<Software>> graph = new HashMap<>();
 
     public static Set<String> installed = new LinkedHashSet<>();
 
-    public static boolean isDependent(String preRequisite, String course) {
+    public static boolean isDependent(String preRequisite, String software) {
         // pre-requisite=NETCARD, course=TCPIP
-        List<Component> components = graph.get(preRequisite);
-        if(components == null) {
+        List<Software> softwares = graph.get(preRequisite);
+        if(softwares == null) {
             return false;
         }
-        for(Component component : components) {
-            if(component.name.equals(course)) {
+        for(Software s : softwares) {
+            if(s.name.equals(software)) {
                 return true;
             }
         }
         return false;
     }
 
-    public static boolean addDependency(String preRequisite, String course) {
+    public static boolean addDependency(String preRequisite, String software) {
 
-        boolean willThisCreateCycle = isDependent(course, preRequisite);
+        boolean isAlreadyPresent = isDependent(preRequisite, software);
+        if(isAlreadyPresent) {
+            return true;
+        }
 
-        if(willThisCreateCycle) {
-            // ignore scenario
+        boolean isCycleCreator = isDependent(software, preRequisite);
+        if(isCycleCreator) {
             return false;
         }
 
         // Definitely prerequisite will be created at the end of this method
-        List<Component> components = graph.get(preRequisite);
-        if(components == null) {
-            components = new ArrayList<>();
-            graph.put(preRequisite, components);
+        List<Software> softwares = graph.get(preRequisite);
+        if(softwares == null) {
+            softwares = new ArrayList<>();
+            graph.put(preRequisite, softwares);
         }
 
-        for (Component component : components) {
-            if (component.name.equals(course)) {
-                // dependency already exists, nothing to do
-                return true;
-            }
-        }
-        // simple add
-        components.add(new Component(course));
+        softwares.add(new Software(software));
         return true;
     }
 /*

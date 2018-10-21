@@ -10,35 +10,120 @@ import java.util.*;
  */
 public class Main {
 
-    public static class Node {
+    public static class HierarchyStore {
 
-        String key;
-        Node parent;
-        Set<Node> children;
+        String grandParent = null;
+        String grandChild = null;
 
-        public Node(String key) {
-            this.key = key;
-            this.parent = null;
-            children = new HashSet<>();
+        public HierarchyStore() {}
+
+        public void setGrandParent(String grandParent) {
+            this.grandParent = grandParent;
         }
 
-        @Override
-        public boolean equals(Object other) {
-            return this.key.equals((String)other);
-        }
-
-        @Override
-        public int hashCode() {
-            return this.key.hashCode();
+        public void setGrandChild(String grandChild) {
+            this.grandChild = grandChild;
         }
 
     }
 
-    static Map<String, Node> componentMap = new HashMap<>();
+    public static class Component {
 
-    static Set<String> installed = new LinkedHashSet<>();
+        public String name;
+        public List<HierarchyStore> hierarchyStoreList;
+
+        Component(String name) {
+            this.name = name;
+            this.hierarchyStoreList = new ArrayList<>();
+        }
+    }
+
+    public static Map<String, List<Component>> graph = new HashMap<>();
+
+    public static Set<String> installed = new LinkedHashSet<>();
+
+    public static boolean isDependent(String preRequisite, String course) {
+        // pre-requisite=NETCARD, course=TCPIP
+        List<Component> components = graph.get(preRequisite);
+        if(components == null) {
+            return false;
+        }
+        for(Component component : components) {
+            if(component.name.equals(course)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean addDependency(String preRequisite, String course) {
+
+        boolean willThisCreateCycle = isDependent(course, preRequisite);
+
+        if(willThisCreateCycle) {
+            // ignore scenario
+            return false;
+        }
+
+        // Definitely prerequisite will be created at the end of this method
+        List<Component> components = graph.get(preRequisite);
+        if(components == null) {
+            components = new ArrayList<>();
+            graph.put(preRequisite, components);
+        }
+
+        for (Component component : components) {
+            if (component.name.equals(course)) {
+                // dependency already exists, nothing to do
+                return true;
+            }
+        }
+        // simple add
+        components.add(new Component(course));
+        return true;
+    }
+/*
+    public static void install(String component) {
+
+        for(String preRequisite : component.preRequisites()) {
+            if(!installed.contains(preRequisite)) {
+                install(preRequisite);
+            }
+        }
+        installed.add(component);
+        System.out.println(component);
+    }
+
+    public static void install(String component) {
+
+        for(String preRequisite : component.preRequisites()) {
+            if(!installed.contains(preRequisite)) {
+                install(preRequisite);
+            }
+        }
+        installed.add(component);
+        System.out.println(component);
+    }
+
+    public static void remove(String component) {
 
 
+        boolean isMyDependentsInstalled = false;
+
+        for(String dependent : component.dependents()) {
+            if(installed.contains(dependent) {
+                return false;
+            }
+        }
+
+        if(isMyImmediateDependentInvolved) {
+            System.out.println(component + " is still needed");
+        } else {
+            System.out.println("Removing " + component);
+            remove(component.immediateDependent());
+        }
+    }
+    */
 
     public static void main(String[] args) {
 
@@ -64,51 +149,37 @@ public class Main {
                 String[] components = line.split(" ");
 
                 // update data structure
-                for(int i = components.length - 1; i >= 1; i--) {
-
-                    String key = components[i].toUpperCase();
-                    Node node = componentMap.get(key);
-
-                    // Adding component for the first time
-                    if(node == null) {
-                        node = new Node(key);
-                        componentMap.put(key, node);
-                    }
-
-                    // BFS
-                    Queue<Node> queue = new LinkedList<>();
-                    queue.add(node);
-
-                    while(!queue.isEmpty()) {
-                        Node temp = queue.poll();
-                        Set<Node> children = temp.children;
-                        for(Node child : children) {
-                            if(node.key == child.key) {
-                                System.out.println(temp.key + " depends on " + node.key + ", ignoring command");
-                                return;
-                            }
-                            queue.add(child);
-                        }
-                    }
-
-                    if(i <= components.length - 2) {
-                        node.parent = componentMap.get(components[i+1]);
+                for(int i = components.length - 1; i >= 2; i--) {
+                    boolean check = addDependency(components[i], components[i - 1]);
+                    if(!check) {
+                        System.out.println(components[i] + " depends on " +
+                                           components[i - 1] + ", ignoring command");
+                        break;
                     }
                 }
             }
-
+/*
             if(line.startsWith("INSTALL")) {
                 System.out.println(line);
                 String[] components = line.split(" ");
 
                 String key = components[1];
                 Node node = componentMap.get(key);
-                while(node != null) {
-                    if(!installed.contains(node.key)) {
-                        installed.add(node.key);
-                        System.out.println("Installing " + node.key);
+
+                Stack<Node> stack = new Stack<>();
+                stack.add(node);
+
+                while(!stack.isEmpty()) {
+                    Node temp = stack.peek();
+                    if(temp.parent != null) {
+                        stack.push(temp.parent);
+                    } else {
+                        Node pop = stack.pop();
+                        if(!installed.contains(pop.key)) {
+                            installed.add(pop.key);
+                            System.out.println("Installing " + pop.key);
+                        }
                     }
-                    node = node.parent;
                 }
             }
 
@@ -151,6 +222,7 @@ public class Main {
                     System.out.println(str);
                 }
             }
+            */
 
         }
 

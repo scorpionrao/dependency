@@ -86,12 +86,6 @@ public class Main {
 
             if(i == softwareNames.length - 1) {
                 // root node
-                boolean isCycleCreator = isDependent(softwareNames[i], softwareNames[i+1]);
-                if(isCycleCreator) {
-                    System.out.println(softwareNames[i+1] + " depends on " + softwareNames[i] + ", ignoring command");
-                    break;
-                }
-
                 boolean exist = false;
                 for(Hierarchy hierarchy : softwareNode.hierarchyStoreList) {
                     if(hierarchy.grandChild.equals(softwareNames[i-1])) {

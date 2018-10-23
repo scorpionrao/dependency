@@ -10,12 +10,11 @@ import java.util.*;
  */
 public class Main {
 
-    public static class HierarchyStore {
+    // Classes
+    public static class Hierarchy {
 
         String grandParent = null;
         String grandChild = null;
-
-        public HierarchyStore() {}
 
         public void setGrandParent(String grandParent) {
             this.grandParent = grandParent;
@@ -27,100 +26,233 @@ public class Main {
 
     }
 
-    public static class Software
-    {
+    public static class Node {
 
         public String name;
-        public List<HierarchyStore> hierarchyStoreList;
+        public List<Hierarchy> hierarchyStoreList;
 
-        Software(String name) {
+        public Node(String name) {
             this.name = name;
             this.hierarchyStoreList = new ArrayList<>();
         }
     }
 
-    public static Map<String, List<Software>> graph = new HashMap<>();
+    // Static members
+    public static Map<String, Node> mapForAccess = new HashMap<>();
+
+    public static Map<String, List<Node>> courseGraph = new HashMap<>();
 
     public static Set<String> installed = new LinkedHashSet<>();
 
-    public static boolean isDependent(String preRequisite, String software) {
-        // pre-requisite=NETCARD, course=TCPIP
-        List<Software> softwares = graph.get(preRequisite);
-        if(softwares == null) {
+
+    public static boolean isDependent(String preRequisiteName, String courseName) {
+        // no information
+        if(preRequisiteName == null
+        || courseName == null
+        || courseGraph.get(preRequisiteName) == null
+        || courseGraph.get(courseName) == null) {
             return false;
         }
-        for(Software s : softwares) {
-            if(s.name.equals(software)) {
+
+        // already in system, nothing to do, checks only ONE level for now
+        List<Node> nodeList = courseGraph.get(preRequisiteName);
+        for(Node node : nodeList) {
+            if(node.name.equals(courseName)) {
                 return true;
             }
         }
+        // requested dependency is not yet defined
         return false;
     }
 
-    public static boolean addDependency(String preRequisite, String software) {
+    public static void depend(String[] softwareNames) {
 
-        boolean isAlreadyPresent = isDependent(preRequisite, software);
-        if(isAlreadyPresent) {
-            return true;
+        for(int i = softwareNames.length - 1; i >= 0; i--) {
+
+            String softwareName = softwareNames[i];
+            if(softwareName == null) {
+                throw new NullPointerException();
+            }
+
+            Node softwareNode = mapForAccess.get(softwareName);
+
+            if(softwareNode == null) {
+                softwareNode = new Node(softwareName);
+                mapForAccess.put(softwareName, softwareNode);
+                courseGraph.put(softwareName, new ArrayList<>());
+            } else {
+                softwareNode = mapForAccess.get(softwareName);
+            }
+
+            if(i == softwareNames.length - 1) {
+                // root node
+                boolean isCycleCreator = isDependent(softwareNames[i], softwareNames[i+1]);
+                if(isCycleCreator) {
+                    System.out.println(softwareNames[i+1] + " depends on " + softwareNames[i] + ", ignoring command");
+                    break;
+                }
+
+                boolean exist = false;
+                for(Hierarchy hierarchy : softwareNode.hierarchyStoreList) {
+                    if(hierarchy.grandChild.equals(softwareNames[i-1])) {
+                        exist = true;
+                    }
+                }
+
+                // create {NULL / [i-1]} exist
+                if(!exist) {
+                    Hierarchy hierarchy = new Hierarchy();
+                    hierarchy.grandParent = null;
+                    hierarchy.grandChild = softwareNames[i-1];
+                    softwareNode.hierarchyStoreList.add(hierarchy);
+                }
+                // no check for dependency
+                // no updates to courseGraph
+
+            } else if (i < softwareNames.length - 1 && i > 0) {
+                // middle element
+
+                boolean isCycleCreator = isDependent(softwareNames[i], softwareNames[i+1]);
+                if(isCycleCreator) {
+                    System.out.println(softwareNames[i+1] + " depends on " + softwareNames[i] + ", ignoring command");
+                    break;
+                }
+                boolean exist = false;
+                for(Hierarchy hierarchy : softwareNode.hierarchyStoreList) {
+                    if(hierarchy.grandChild.equals(softwareNames[i-1]) && hierarchy.grandParent.equals(softwareNames[i+1])) {
+                        exist = true;
+                    }
+                }
+
+                // create {[i+1] / NULL} exist
+                if(!exist) {
+                    Hierarchy hierarchy = new Hierarchy();
+                    hierarchy.grandParent = softwareNames[i+1];
+                    hierarchy.grandChild = softwareNames[i-1];
+                    softwareNode.hierarchyStoreList.add(hierarchy);
+                }
+                List<Node> nodeList = courseGraph.get(softwareNames[i+1]);
+                nodeList.add(mapForAccess.get(softwareNames[i]));
+            } else {
+                // leaf (i == 0)
+                boolean isDependencyAlreadyDefined = isDependent(softwareNames[i+1], softwareNames[i]);
+                if(isDependencyAlreadyDefined) {
+                    continue;
+                }
+
+                boolean isCycleCreator = isDependent(softwareNames[i], softwareNames[i+1]);
+                if(isCycleCreator) {
+                    System.out.println(softwareNames[i+1] + " depends on " + softwareNames[i] + ", ignoring command");
+                    break;
+                }
+                boolean exist = false;
+                for(Hierarchy hierarchy : softwareNode.hierarchyStoreList) {
+                    if(hierarchy.grandParent.equals(softwareNames[i+1])) {
+                        exist = true;
+                    }
+                }
+
+                // create {[i+1] / NULL} exist
+                if(!exist) {
+                    Hierarchy hierarchy = new Hierarchy();
+                    hierarchy.grandParent = softwareNames[i+1];
+                    hierarchy.grandChild = null;
+                    softwareNode.hierarchyStoreList.add(hierarchy);
+                }
+                List<Node> nodeList = courseGraph.get(softwareNames[i+1]);
+                nodeList.add(mapForAccess.get(softwareNames[i]));
+            }
+
         }
-
-        boolean isCycleCreator = isDependent(software, preRequisite);
-        if(isCycleCreator) {
-            return false;
-        }
-
-        // Definitely prerequisite will be created at the end of this method
-        List<Software> softwares = graph.get(preRequisite);
-        if(softwares == null) {
-            softwares = new ArrayList<>();
-            graph.put(preRequisite, softwares);
-        }
-
-        softwares.add(new Software(software));
-        return true;
     }
-/*
-    public static void install(String component) {
 
-        for(String preRequisite : component.preRequisites()) {
-            if(!installed.contains(preRequisite)) {
-                install(preRequisite);
+    public static void install(String softwareName) {
+        if(softwareName == null) {
+            return;
+        }
+
+        Node node = mapForAccess.get(softwareName);
+
+        if(node == null) {
+            node = new Node(softwareName);
+            mapForAccess.put(softwareName, node);
+            courseGraph.put(softwareName, new ArrayList<>());
+        }
+
+        for(Hierarchy hierarchy : node.hierarchyStoreList) {
+            String grandParent = hierarchy.grandParent;
+            if(grandParent != null) {
+                // keep going up
+                install(grandParent, softwareName);
             }
         }
-        installed.add(component);
-        System.out.println(component);
-    }
 
-    public static void install(String component) {
-
-        for(String preRequisite : component.preRequisites()) {
-            if(!installed.contains(preRequisite)) {
-                install(preRequisite);
-            }
-        }
-        installed.add(component);
-        System.out.println(component);
-    }
-
-    public static void remove(String component) {
-
-
-        boolean isMyDependentsInstalled = false;
-
-        for(String dependent : component.dependents()) {
-            if(installed.contains(dependent) {
-                return false;
-            }
-        }
-
-        if(isMyImmediateDependentInvolved) {
-            System.out.println(component + " is still needed");
+        if(!installed.contains(softwareName)) {
+            installed.add(softwareName);
+            System.out.println("Installing " + softwareName);
         } else {
-            System.out.println("Removing " + component);
-            remove(component.immediateDependent());
+            System.out.println(softwareName + " is already installed");
         }
     }
-    */
+
+    public static void install(String softwareName, String requestingChild) {
+        if(softwareName == null) {
+            return;
+        }
+
+        Node node = mapForAccess.get(softwareName);
+
+        for(Hierarchy hierarchy : node.hierarchyStoreList) {
+            if(hierarchy.grandChild.equals(requestingChild)) {
+                String grandParent = hierarchy.grandParent;
+                if(grandParent != null) {
+                    // keep going up
+                    install(grandParent, softwareName);
+                }
+            }
+        }
+        if(!installed.contains(softwareName)) {
+            installed.add(softwareName);
+            System.out.println("Installing " + softwareName);
+        }
+    }
+
+    public static void remove(String softwareName, boolean isHardRemove) {
+        if(softwareName == null) {
+            return;
+        }
+
+        if(!installed.contains(softwareName)) {
+            System.out.println(softwareName + " is not installed");
+        }
+
+        Node node = mapForAccess.get(softwareName);
+
+        boolean isRemovable = true;
+
+        for(Hierarchy hierarchy : node.hierarchyStoreList) {
+            // root prerequisite
+            String grandChild = hierarchy.grandChild;
+            if(grandChild != null && installed.contains(grandChild)) {
+                isRemovable = false;
+                break;
+            }
+        }
+
+        if(isRemovable) {
+            installed.remove(softwareName);
+            System.out.println("Removing " + softwareName);
+
+            for(Hierarchy hierarchy : node.hierarchyStoreList) {
+                String grandParent = hierarchy.grandParent;
+                if(grandParent != null && installed.contains(grandParent)) {
+                    remove(grandParent, false);
+                }
+            }
+        } else if (isHardRemove) {
+            System.out.println(softwareName + " is still needed");
+        }
+    }
 
     public static void main(String[] args) {
 
@@ -143,74 +275,21 @@ public class Main {
 
             if(line.startsWith("DEPEND")) {
                 System.out.println(line);
-                String[] components = line.split(" ");
-
-                // update data structure
-                for(int i = components.length - 1; i >= 2; i--) {
-                    boolean check = addDependency(components[i], components[i - 1]);
-                    if(!check) {
-                        System.out.println(components[i] + " depends on " +
-                                           components[i - 1] + ", ignoring command");
-                        break;
-                    }
-                }
+                String[] inputArray = line.split(" ");
+                String[] softwareNames = Arrays.copyOfRange(inputArray, 1, inputArray.length);
+                depend(softwareNames);
             }
-/*
+
             if(line.startsWith("INSTALL")) {
                 System.out.println(line);
-                String[] components = line.split(" ");
-
-                String key = components[1];
-                Node node = componentMap.get(key);
-
-                Stack<Node> stack = new Stack<>();
-                stack.add(node);
-
-                while(!stack.isEmpty()) {
-                    Node temp = stack.peek();
-                    if(temp.parent != null) {
-                        stack.push(temp.parent);
-                    } else {
-                        Node pop = stack.pop();
-                        if(!installed.contains(pop.key)) {
-                            installed.add(pop.key);
-                            System.out.println("Installing " + pop.key);
-                        }
-                    }
-                }
+                String[] inputArray = line.split(" ");
+                install(inputArray[1]);
             }
 
             if(line.startsWith("REMOVE")) {
                 System.out.println(line);
-                String[] components = line.split(" ");
-
-                String key = components[1];
-                Node node = componentMap.get(key);
-
-                // BFS
-                Queue<Node> queue = new LinkedList<>();
-                queue.add(node);
-
-                boolean remove = true;
-                while(!queue.isEmpty()) {
-                    Node temp = queue.poll();
-
-                    Set<Node> children = temp.children;
-                    for(Node child : children) {
-                        if(installed.contains(child)) {
-                            remove = false;
-                            break;
-                        }
-                        queue.add(child);
-                    }
-                }
-
-                if(remove && installed.contains(node.key)) {
-                    installed.remove(node.key);
-                    System.out.println("Removing " + node.key);
-                } else {
-                    System.out.println(node.key + " is still needed");
-                }
+                String[] inputArray = line.split(" ");
+                remove(inputArray[1], true);
             }
 
             if(line.startsWith("LIST")) {
@@ -219,8 +298,6 @@ public class Main {
                     System.out.println(str);
                 }
             }
-            */
-
         }
 
     }

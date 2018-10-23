@@ -229,27 +229,70 @@ public class Main {
 
         Node node = mapForAccess.get(softwareName);
 
-        boolean isRemovable = true;
+        boolean isNotRemovable = false;
 
         for(Hierarchy hierarchy : node.hierarchyStoreList) {
             // root prerequisite
             String grandChild = hierarchy.grandChild;
             if(grandChild != null && installed.contains(grandChild)) {
-                isRemovable = false;
+                isNotRemovable = true;
                 break;
             }
         }
 
-        if(isRemovable) {
+        if(isNotRemovable) {
+            if(isHardRemove) {
+                System.out.println(softwareName + " is still needed");
+            }
+        } else {
             installed.remove(softwareName);
             System.out.println("Removing " + softwareName);
 
             for(Hierarchy hierarchy : node.hierarchyStoreList) {
                 String grandParent = hierarchy.grandParent;
-                remove(grandParent, false);
+                remove(grandParent, softwareName,false);
             }
-        } else if (isHardRemove) {
-            System.out.println(softwareName + " is still needed");
+        }
+    }
+
+    public static void remove(String softwareName, String requester, boolean isHardRemove) {
+        if(softwareName == null) {
+            return;
+        }
+
+        if(isHardRemove && !installed.contains(softwareName)) {
+            System.out.println(softwareName + " is not installed");
+            return;
+        }
+
+        Node node = mapForAccess.get(softwareName);
+
+        boolean isNotRemovable = false;
+
+        for(Hierarchy hierarchy : node.hierarchyStoreList) {
+            // root prerequisite
+            String grandChild = hierarchy.grandChild;
+            if(grandChild != null && installed.contains(grandChild)) {
+                isNotRemovable = true;
+                break;
+            }
+        }
+
+        if(isNotRemovable) {
+            if(isHardRemove) {
+                System.out.println(softwareName + " is still needed");
+            }
+        } else {
+            installed.remove(softwareName);
+            System.out.println("Removing " + softwareName);
+
+            for(Hierarchy hierarchy : node.hierarchyStoreList) {
+                String grandParent = hierarchy.grandParent;
+                String grandChild = hierarchy.grandChild;
+                if(grandChild.equals(requester)) {
+                    remove(grandParent, false);
+                }
+            }
         }
     }
 

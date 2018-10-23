@@ -57,6 +57,7 @@ public class SampleInputTest extends BaseTest {
                 "Installing A\n" +
                 "REMOVE A\n" +
                 "Removing A\n" +
+                "Removing B\n" +
                 "END\n";
 
         runTest(expectedOutput, input);
@@ -74,13 +75,13 @@ public class SampleInputTest extends BaseTest {
 
         String expectedOutput = "DEPEND A B C\n" +
                 "INSTALL B\n" +
+                "Installing C\n" +
                 "Installing B\n" +
                 "INSTALL A\n" +
-                "Installing C\n" +
                 "Installing A\n" +
                 "LIST\n" +
-                "B\n" +
                 "C\n" +
+                "B\n" +
                 "A\n" +
                 "END\n";
 

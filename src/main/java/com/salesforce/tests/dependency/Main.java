@@ -86,6 +86,12 @@ public class Main {
 
             if(i == softwareNames.length - 1) {
                 // root node
+                boolean isCycleCreator = isDependent(softwareNames[i-1], softwareNames[i]);
+                if(isCycleCreator) {
+                    System.out.println(softwareNames[i] + " depends on " + softwareNames[i-1] + ", ignoring command");
+                    break;
+                }
+
                 boolean exist = false;
                 for(Hierarchy hierarchy : softwareNode.hierarchyStoreList) {
                     if(hierarchy.grandChild.equals(softwareNames[i-1])) {
@@ -216,8 +222,9 @@ public class Main {
             return;
         }
 
-        if(!installed.contains(softwareName)) {
+        if(isHardRemove && !installed.contains(softwareName)) {
             System.out.println(softwareName + " is not installed");
+            return;
         }
 
         Node node = mapForAccess.get(softwareName);
@@ -239,9 +246,7 @@ public class Main {
 
             for(Hierarchy hierarchy : node.hierarchyStoreList) {
                 String grandParent = hierarchy.grandParent;
-                if(grandParent != null && installed.contains(grandParent)) {
-                    remove(grandParent, false);
-                }
+                remove(grandParent, false);
             }
         } else if (isHardRemove) {
             System.out.println(softwareName + " is still needed");
